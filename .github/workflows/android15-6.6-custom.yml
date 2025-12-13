@@ -1,7 +1,7 @@
 name: Android15-6.6-Custom
 
 on: 
-  push:                #<-- Temporär hinzugefügt, um den Button zu aktivieren (später entfernen!)
+  push:               # <-- Temporär hinzugefügt, um den Button zu aktivieren (später entfernen!)
     branches: [ main ]  # Passe an deinen default Branch an (main oder master)
   workflow_dispatch:
     inputs:
@@ -18,7 +18,7 @@ on:
       version_name:
         required: true
         type: string
-        description: Name für Artifacts (vermeide Sonderzeichen wie \ / : " < > | * ?)
+        description: "Name für Artifacts (vermeide Sonderzeichen wie \\ / : \" < > | * ?)"
         default: android15-6.6-docker
       custom:
         required: true
