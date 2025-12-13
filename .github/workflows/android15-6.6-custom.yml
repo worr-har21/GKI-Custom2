@@ -40,12 +40,7 @@ jobs:
       ACTIONS_STEP_DEBUG: false
       ACTIONS_RUNNER_DEBUG: false
 
-      BAZEL_ARGS: >
-        --jobs=6
-        --local_ram_resources=8192
-        --local_cpu_resources=6
-        --noshow_progress
-        --announce_rc
+      BAZEL_ARGS="--jobs=6 --local_ram_resources=8192 --local_cpu_resources=6 --noshow_progress --announce_rc"
 
     steps:
     - name: Checkout
@@ -84,37 +79,35 @@ jobs:
       run: |
         mkdir android-kernel
         cd android-kernel
-        repo init \
-          --depth=1 \
-          --no-tags \
-          -u https://android.googlesource.com/kernel/manifest \
-          -b common-android15-6.6
+        repo init --depth=1 --no-tags -u https://android.googlesource.com/kernel/manifest -b common-android15-6.6
         repo sync -c -j6
 
     - name: Apply Docker / LXC patches
       if: ${{ github.event_name == 'push' || inputs.custom == 'true' }}
       run: |
+        echo "Applying Docker/LXC patches..."
         git clone https://github.com/rvalyi/GKI-Custom.git gki-patch
         if [ -f gki-patch/config/gki_defconfig-android15-6.6 ]; then
-          cp gki-patch/config/gki_defconfig-android15-6.6 \
-            android-kernel/common/arch/arm64/configs/gki_defconfig
+          cp gki-patch/config/gki_defconfig-android15-6.6 android-kernel/common/arch/arm64/configs/gki_defconfig
         fi
         cd android-kernel/common
+        git apply --check $GITHUB_WORKSPACE/gki-patch/patchs/*.patch || echo "Patches might already be applied"
         git apply $GITHUB_WORKSPACE/gki-patch/patchs/*.patch || true
 
     - name: KernelSU integration
       if: ${{ github.event_name == 'push' || inputs.kernelsu == 'true' }}
       run: |
+        echo "Integrating KernelSU..."
         cd android-kernel
-        curl -fsSL https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh | bash -
+        curl -fsSL https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh | bash -x
 
     - name: Build kernel (Bazel)
       run: |
         cd android-kernel
         mkdir -p out/android15-6.6/dist
-        tools/bazel run //common:kernel_aarch64_dist \
-          ${{ env.BAZEL_ARGS }} -- \
-          --dist_dir=out/android15-6.6/dist
+        BAZEL_CMD="tools/bazel run //common:kernel_aarch64_dist ${BAZEL_ARGS} -- --dist_dir=out/android15-6.6/dist"
+        echo "Running Bazel build: $BAZEL_CMD"
+        eval $BAZEL_CMD
 
     - name: Sanitize artifact name
       run: |
