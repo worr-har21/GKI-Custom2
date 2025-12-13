@@ -1,6 +1,6 @@
 name: Android15-6.6-Custom
 
-on: 
+on:
   push:
     branches: [ main ]
   workflow_dispatch:
@@ -8,22 +8,27 @@ on:
       os_patch_level:
         required: true
         type: string
+        description: Patch level (z. B. 2024-11)
         default: 2024-11
       os_version:
         required: true
         type: string
+        description: OS Version
         default: 15.0.0
       version_name:
         required: true
         type: string
+        description: Artifact name
         default: android15-6.6-docker
       custom:
         required: true
         type: boolean
+        description: Enable LXC/Docker Support
         default: true
       kernelsu:
         required: true
         type: boolean
+        description: Enable KernelSU
         default: true
 
 jobs:
@@ -36,9 +41,10 @@ jobs:
       ACTIONS_RUNNER_DEBUG: false
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
 
-    # 🔥 KRITISCH: Platz freimachen
+    # 🔥 EXTREM WICHTIG: Speicher freimachen
     - name: Free disk space
       run: |
         echo "=== BEFORE CLEANUP ==="
@@ -54,7 +60,7 @@ jobs:
         echo "=== AFTER CLEANUP ==="
         df -h
 
-    # 🔁 Swap gegen OOM
+    # 🔁 Swap gegen OOM & Log-Explosion
     - name: Enable swap
       run: |
         sudo fallocate -l 8G /swapfile
@@ -63,10 +69,17 @@ jobs:
         sudo swapon /swapfile
         free -h
 
-    - name: Install Dependencies
+    - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y repo wget unzip python3 git zip
+        sudo apt install -y \
+          repo \
+          wget \
+          unzip \
+          python3 \
+          git \
+          zip \
+          curl
 
     - name: Install latest repo tool
       run: |
@@ -74,41 +87,42 @@ jobs:
         chmod +x repo
         sudo mv repo /usr/local/bin/repo
 
-    - name: Sync the kernel source code
+    - name: Sync kernel source
       run: |
         mkdir android-kernel
         cd android-kernel
         repo init \
           --depth=1 \
           --no-tags \
-          --optimized-fetch \
           -u https://android.googlesource.com/kernel/manifest \
           -b common-android15-6.6
         repo sync -c -j$(nproc)
 
-    - name: Apply patches and configuration files (Docker/LXC Support)
+    - name: Apply Docker / LXC patches
       if: ${{ inputs.custom }}
       run: |
         git clone https://github.com/rvalyi/GKI-Custom.git gki-patch
         if [ -f gki-patch/config/gki_defconfig-android15-6.6 ]; then
-          cp gki-patch/config/gki_defconfig-android15-6.6 android-kernel/common/arch/arm64/configs/gki_defconfig
+          cp gki-patch/config/gki_defconfig-android15-6.6 \
+            android-kernel/common/arch/arm64/configs/gki_defconfig
         fi
         cd android-kernel/common
         git apply $GITHUB_WORKSPACE/gki-patch/patchs/*.patch || true
 
-    - name: KernelSU Integration
+    - name: KernelSU integration
       if: ${{ inputs.kernelsu }}
       run: |
         cd android-kernel
         curl -LSs https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh | bash -
 
-    - name: Build Kernel
+    - name: Build kernel (Bazel)
       run: |
         cd android-kernel
         mkdir -p out/android15-6.6/dist
-        tools/bazel run //common:kernel_aarch64_dist -- --dist_dir=out/android15-6.6/dist
+        tools/bazel run //common:kernel_aarch64_dist -- \
+          --dist_dir=out/android15-6.6/dist
 
-    - name: Sanitize Artifact Name
+    - name: Sanitize artifact name
       run: |
         SAFE_NAME=$(echo "${{ inputs.version_name }}" | sed 's/[\\/:"<>|*?]/-/g')
         echo "SAFE_ARTIFACT_NAME=Kernel-${SAFE_NAME}-${{ inputs.os_patch_level }}" >> $GITHUB_ENV
@@ -117,13 +131,14 @@ jobs:
       run: |
         OUTDIR=android-kernel/out/android15-6.6/dist
         mkdir -p output
+
         cp $OUTDIR/Image* output/ 2>/dev/null || true
 
         git clone https://github.com/Kernel-SU/AnyKernel3
         rm -rf AnyKernel3/.git
         cp $OUTDIR/Image AnyKernel3/ 2>/dev/null || true
 
-    - name: Upload Artifacts
+    - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.SAFE_ARTIFACT_NAME }}
