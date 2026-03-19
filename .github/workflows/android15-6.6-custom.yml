@@ -76,7 +76,7 @@ jobs:
       if: ${{ github.event_name == 'push' || inputs.custom == 'true' }}
       run: |
         echo "Applying Docker/LXC patches..."
-        git clone https://github.com/rvalyi/GKI-Custom.git gki-patch
+        git clone https://github.com/worr-har21/GKI-Custom.git gki-patch
         if [ -f gki-patch/config/gki_defconfig-android15-6.6 ]; then
           cp gki-patch/config/gki_defconfig-android15-6.6 android-kernel/common/arch/arm64/configs/gki_defconfig
         fi
