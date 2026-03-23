@@ -77,12 +77,11 @@ jobs:
       run: |
         echo "Applying Docker/LXC patches..."
         git clone https://github.com/worr-har21/gki-patches.git gki-patch
-        cd android-kernel
-        if [ -f gki-patch/config/gki_defconfig-android15-6.6 ]; then
-          cp android-kernel/gki-patch/config/gki_defconfig-android15-6.6 android-kernel/common/arch/arm64/configs/droidspaces.config
+        if [ -f /home/runner/work/GKI-Custom2/GKI-Custom2/gki-patch/config/gki_defconfig-android15-6.6 ]; then
+          cp /home/runner/work/GKI-Custom2/GKI-Custom2/gki-patch/config/gki_defconfig-android15-6.6 /home/runner/work/GKI-Custom2/GKI-Custom2/android-kernel/common/arch/arm64/configs/droidspaces.config
         fi
-        PATCH_DIR="gki-patch/patchs"
-        cd android-kernel
+        PATCH_DIR="/home/runner/work/GKI-Custom2/GKI-Custom2/gki-patch/patchs"
+        cd /home/runner/work/GKI-Custom2/GKI-Custom2/android-kernel/common
         for patch in $PATCH_DIR/*.patch; do
           echo "Checking patch $patch"
           git apply --check "$patch" && git apply "$patch" && echo "Applied $patch" || echo "Patch $patch already applied or failed"
@@ -90,7 +89,7 @@ jobs:
         
     - name: Merge configs 
       run: |
-        cd android-kernel
+        cd /home/runner/work/GKI-Custom2/GKI-Custom2/android-kernel
         common/scripts/kconfig/merge_config.sh android-kernel/common/arch/arm64/configs/gki_defconfig android-kernel/common/arch/arm64/configs/droidspaces.config
 
     - name: KernelSU integration
