@@ -80,7 +80,7 @@ jobs:
         if [ -f gki-patch/config/gki_defconfig-android15-6.6 ]; then
           cp gki-patch/config/gki_defconfig-android15-6.6 android-kernel/common/arch/arm64/configs/gki_defconfig
         fi
-        PATCH_DIR="$GITHUB_WORKSPACE/gki-patch/patchs"
+        PATCH_DIR="gki-patch/patchs
         cd android-kernel
         for patch in $PATCH_DIR/*.patch; do
           echo "Checking patch $patch"
@@ -96,6 +96,7 @@ jobs:
 
     - name: Update gki_defconfig with savedefconfig
       run: |
+        cd android-kernel
         tools/bazel run //common:kernel_aarch64_config -- --update
     
     - name: Build Kernel (Bazel)
